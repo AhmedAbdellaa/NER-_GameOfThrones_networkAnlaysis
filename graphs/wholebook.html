@@ -1,0 +1,444 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1920px;
+                 height: 1024px;
+                 background-color: black;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 1920px;
+                 height: 1024px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"font": {"color": "white"}, "group": 0, "id": "ned", "label": "ned", "shape": "dot", "size": 24}, {"font": {"color": "white"}, "group": 0, "id": "robert", "label": "robert", "shape": "dot", "size": 26}, {"font": {"color": "white"}, "group": 0, "id": "catelyn", "label": "catelyn", "shape": "dot", "size": 31}, {"font": {"color": "white"}, "group": 1, "id": "jon", "label": "jon", "shape": "dot", "size": 57}, {"font": {"color": "white"}, "group": 5, "id": "arya", "label": "arya", "shape": "dot", "size": 29}, {"font": {"color": "white"}, "group": 11, "id": "varys", "label": "varys", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 0, "id": "cersei", "label": "cersei", "shape": "dot", "size": 17}, {"font": {"color": "white"}, "group": 0, "id": "renly", "label": "renly", "shape": "dot", "size": 8}, {"font": {"color": "white"}, "group": 0, "id": "jaime", "label": "jaime", "shape": "dot", "size": 42}, {"font": {"color": "white"}, "group": 0, "id": "pycelle", "label": "pycelle", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 0, "id": "jory", "label": "jory", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "barristan", "label": "barristan", "shape": "dot", "size": 13}, {"font": {"color": "white"}, "group": 12, "id": "sansa", "label": "sansa", "shape": "dot", "size": 27}, {"font": {"color": "white"}, "group": 0, "id": "brandon", "label": "brandon", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "eddard", "label": "eddard", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "tywin", "label": "tywin", "shape": "dot", "size": 21}, {"font": {"color": "white"}, "group": 8, "id": "rhaegar", "label": "rhaegar", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 0, "id": "lyanna", "label": "lyanna", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "gregor", "label": "gregor", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 9, "id": "theon", "label": "theon", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "arryn", "label": "arryn", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "loras", "label": "loras", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "aerys", "label": "aerys", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 12, "id": "petyr", "label": "petyr", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 0, "id": "vayon", "label": "vayon", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 6, "id": "stannis", "label": "stannis", "shape": "dot", "size": 29}, {"font": {"color": "white"}, "group": 12, "id": "lysa", "label": "lysa", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 6, "id": "davos", "label": "davos", "shape": "dot", "size": 15}, {"font": {"color": "white"}, "group": 0, "id": "mya", "label": "mya", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 11, "id": "tyrion", "label": "tyrion", "shape": "dot", "size": 18}, {"font": {"color": "white"}, "group": 0, "id": "lancel", "label": "lancel", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 8, "id": "aegon", "label": "aegon", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 0, "id": "kevan", "label": "kevan", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 5, "id": "thoros", "label": "thoros", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "taena", "label": "taena", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "sam", "label": "sam", "shape": "dot", "size": 18}, {"font": {"color": "white"}, "group": 1, "id": "ygritte", "label": "ygritte", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "tormund", "label": "tormund", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "mormont", "label": "mormont", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "qhorin", "label": "qhorin", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "grenn", "label": "grenn", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "mance", "label": "mance", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 6, "id": "melisandre", "label": "melisandre", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 1, "id": "satin", "label": "satin", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "bowen", "label": "bowen", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "craster", "label": "craster", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "alliser", "label": "alliser", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "clydas", "label": "clydas", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "benjen", "label": "benjen", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "rattleshirt", "label": "rattleshirt", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "samwell", "label": "samwell", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "janos", "label": "janos", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "val", "label": "val", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "stonesnake", "label": "stonesnake", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "ghost", "label": "ghost", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 4, "id": "old", "label": "old", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "halder", "label": "halder", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "aemon", "label": "aemon", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "alys", "label": "alys", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "jarl", "label": "jarl", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "denys", "label": "denys", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "donal", "label": "donal", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "septon", "label": "septon", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "harma", "label": "harma", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "dalla", "label": "dalla", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "gilly", "label": "gilly", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 11, "id": "mord", "label": "mord", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 6, "id": "queen", "label": "queen", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 1, "id": "styr", "label": "styr", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 4, "id": "rickon", "label": "rickon", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 1, "id": "owen", "label": "owen", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "kegs", "label": "kegs", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "dywen", "label": "dywen", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "yoren", "label": "yoren", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 9, "id": "godry", "label": "godry", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 4, "id": "jojen", "label": "jojen", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "thoren", "label": "thoren", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "chett", "label": "chett", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "ebben", "label": "ebben", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "dareon", "label": "dareon", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "small", "label": "small", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "xhondo", "label": "xhondo", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "bannen", "label": "bannen", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "dickon", "label": "dickon", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "alleras", "label": "alleras", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "brienne", "label": "brienne", "shape": "dot", "size": 18}, {"font": {"color": "white"}, "group": 2, "id": "podrick", "label": "podrick", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "hyle", "label": "hyle", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "dick", "label": "dick", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "cleos", "label": "cleos", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "creighton", "label": "creighton", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "gendry", "label": "gendry", "shape": "dot", "size": 8}, {"font": {"color": "white"}, "group": 2, "id": "timeon", "label": "timeon", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "biter", "label": "biter", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "illifer", "label": "illifer", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "shagwell", "label": "shagwell", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "dontos", "label": "dontos", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "randyll", "label": "randyll", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "qyburn", "label": "qyburn", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 12, "id": "ilyn", "label": "ilyn", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "steelshanks", "label": "steelshanks", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "darry", "label": "darry", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 10, "id": "tommen", "label": "tommen", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "vargo", "label": "vargo", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "hoster", "label": "hoster", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "ryman", "label": "ryman", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "emmon", "label": "emmon", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "bracken", "label": "bracken", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "tytos", "label": "tytos", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "brynden", "label": "brynden", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "walder", "label": "walder", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "tully", "label": "tully", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 10, "id": "myrcella", "label": "myrcella", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 0, "id": "edmure", "label": "edmure", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "daven", "label": "daven", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "genna", "label": "genna", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "arthur", "label": "arthur", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "robin", "label": "robin", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "balon", "label": "balon", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 0, "id": "frey", "label": "frey", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 0, "id": "urswyck", "label": "urswyck", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "jonos", "label": "jonos", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 4, "id": "meera", "label": "meera", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 4, "id": "hodor", "label": "hodor", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 5, "id": "syrio", "label": "syrio", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 5, "id": "hot", "label": "hot", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "weese", "label": "weese", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "sandor", "label": "sandor", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 5, "id": "tom", "label": "tom", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 2, "id": "jaqen", "label": "jaqen", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 12, "id": "nymeria", "label": "nymeria", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "lommy", "label": "lommy", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 5, "id": "clegane", "label": "clegane", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 9, "id": "roose", "label": "roose", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 12, "id": "jeyne", "label": "jeyne", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 5, "id": "harwin", "label": "harwin", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "mycah", "label": "mycah", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "ramsay", "label": "ramsay", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 5, "id": "lem", "label": "lem", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 12, "id": "meryn", "label": "meryn", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 5, "id": "anguy", "label": "anguy", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "amory", "label": "amory", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 5, "id": "tickler", "label": "tickler", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 8, "id": "jorah", "label": "jorah", "shape": "dot", "size": 18}, {"font": {"color": "white"}, "group": 6, "id": "devan", "label": "devan", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "mace", "label": "mace", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 9, "id": "asha", "label": "asha", "shape": "dot", "size": 12}, {"font": {"color": "white"}, "group": 6, "id": "axell", "label": "axell", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 6, "id": "cortnay", "label": "cortnay", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 9, "id": "justin", "label": "justin", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 6, "id": "cressen", "label": "cressen", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 6, "id": "edric", "label": "edric", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 6, "id": "salladhor", "label": "salladhor", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 12, "id": "margaery", "label": "margaery", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 12, "id": "boros", "label": "boros", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 11, "id": "shae", "label": "shae", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 12, "id": "maegor", "label": "maegor", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 12, "id": "moon", "label": "moon", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 9, "id": "rodrik", "label": "rodrik", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 9, "id": "grey", "label": "grey", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 11, "id": "bronn", "label": "bronn", "shape": "dot", "size": 8}, {"font": {"color": "white"}, "group": 0, "id": "roslin", "label": "roslin", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "robb", "label": "robb", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "desmond", "label": "desmond", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "mother", "label": "mother", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 4, "id": "osha", "label": "osha", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 6, "id": "godric", "label": "godric", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 6, "id": "imry", "label": "imry", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 6, "id": "pylos", "label": "pylos", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 9, "id": "black", "label": "black", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 6, "id": "dale", "label": "dale", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "othell", "label": "othell", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "merryweather", "label": "merryweather", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "addam", "label": "addam", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "hizdahr", "label": "hizdahr", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 8, "id": "daario", "label": "daario", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 8, "id": "daenerys", "label": "daenerys", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 10, "id": "quentyn", "label": "quentyn", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 8, "id": "khrazz", "label": "khrazz", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "groleo", "label": "groleo", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "missandei", "label": "missandei", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "skahaz", "label": "skahaz", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 8, "id": "reznak", "label": "reznak", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "euron", "label": "euron", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 9, "id": "victarion", "label": "victarion", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 9, "id": "aeron", "label": "aeron", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 9, "id": "moqorro", "label": "moqorro", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "nute", "label": "nute", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 10, "id": "gerris", "label": "gerris", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 10, "id": "dornish", "label": "dornish", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 10, "id": "cletus", "label": "cletus", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 10, "id": "arianne", "label": "arianne", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 8, "id": "irri", "label": "irri", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 8, "id": "jhiqui", "label": "jhiqui", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 8, "id": "drogo", "label": "drogo", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 11, "id": "vardis", "label": "vardis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 11, "id": "chiggen", "label": "chiggen", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 11, "id": "lollys", "label": "lollys", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 11, "id": "timett", "label": "timett", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 11, "id": "tanda", "label": "tanda", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 11, "id": "haldon", "label": "haldon", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 11, "id": "mandon", "label": "mandon", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 11, "id": "shagga", "label": "shagga", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 8, "id": "viserys", "label": "viserys", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 8, "id": "arstan", "label": "arstan", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 8, "id": "jhogo", "label": "jhogo", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 8, "id": "mirri", "label": "mirri", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 8, "id": "belwas", "label": "belwas", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 8, "id": "penny", "label": "penny", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 8, "id": "illyrio", "label": "illyrio", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 8, "id": "xaro", "label": "xaro", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 8, "id": "qotho", "label": "qotho", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 12, "id": "merrett", "label": "merrett", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "meribald", "label": "meribald", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "florian", "label": "florian", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 12, "id": "osmund", "label": "osmund", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 8, "id": "brown", "label": "brown", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "garlan", "label": "garlan", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "knight", "label": "knight", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 5, "id": "oberyn", "label": "oberyn", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "qarl", "label": "qarl", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "galbart", "label": "galbart", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 10, "id": "cedra", "label": "cedra", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 10, "id": "garin", "label": "garin", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 10, "id": "areo", "label": "areo", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 10, "id": "trystane", "label": "trystane", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "gorold", "label": "gorold", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 12, "id": "osney", "label": "osney", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 12, "id": "megga", "label": "megga", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "kraznys", "label": "kraznys", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "esgred", "label": "esgred", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 9, "id": "reek", "label": "reek", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 6, "id": "shireen", "label": "shireen", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 11, "id": "chella", "label": "chella", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "pyat", "label": "pyat", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "rakharo", "label": "rakharo", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 13, "id": "haggon", "label": "haggon", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 13, "id": "varamyr", "label": "varamyr", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 13, "id": "thistle", "label": "thistle", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "ben", "label": "ben", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "rickard", "label": "rickard", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 14, "id": "yandry", "label": "yandry", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 14, "id": "ysilla", "label": "ysilla", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 4, "id": "luwin", "label": "luwin", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 8, "id": "sweets", "label": "sweets", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "yezzan", "label": "yezzan", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 8, "id": "nurse", "label": "nurse", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 8, "id": "haggo", "label": "haggo", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "blackwood", "label": "blackwood", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "jonquil", "label": "jonquil", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 12, "id": "osfryd", "label": "osfryd", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "utherydes", "label": "utherydes", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 7, "id": "big", "label": "big", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 7, "id": "little", "label": "little", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "gared", "label": "gared", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 3, "id": "waymar", "label": "waymar", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "royce", "label": "royce", "shape": "dot", "size": 1}]);
+                  edges = new vis.DataSet([{"from": "ned", "to": "robert", "value": 159, "width": 1}, {"from": "ned", "to": "catelyn", "value": 56, "width": 1}, {"from": "ned", "to": "jon", "value": 41, "width": 1}, {"from": "ned", "to": "arya", "value": 32, "width": 1}, {"from": "ned", "to": "varys", "value": 17, "width": 1}, {"from": "ned", "to": "cersei", "value": 15, "width": 1}, {"from": "ned", "to": "renly", "value": 12, "width": 1}, {"from": "ned", "to": "jaime", "value": 12, "width": 1}, {"from": "ned", "to": "pycelle", "value": 11, "width": 1}, {"from": "ned", "to": "jory", "value": 11, "width": 1}, {"from": "ned", "to": "barristan", "value": 11, "width": 1}, {"from": "ned", "to": "sansa", "value": 10, "width": 1}, {"from": "ned", "to": "brandon", "value": 10, "width": 1}, {"from": "ned", "to": "eddard", "value": 10, "width": 1}, {"from": "ned", "to": "tywin", "value": 9, "width": 1}, {"from": "ned", "to": "rhaegar", "value": 9, "width": 1}, {"from": "ned", "to": "lyanna", "value": 9, "width": 1}, {"from": "ned", "to": "gregor", "value": 8, "width": 1}, {"from": "ned", "to": "theon", "value": 8, "width": 1}, {"from": "ned", "to": "arryn", "value": 8, "width": 1}, {"from": "ned", "to": "loras", "value": 7, "width": 1}, {"from": "ned", "to": "aerys", "value": 7, "width": 1}, {"from": "ned", "to": "petyr", "value": 7, "width": 1}, {"from": "ned", "to": "vayon", "value": 7, "width": 1}, {"from": "robert", "to": "jaime", "value": 44, "width": 1}, {"from": "robert", "to": "jon", "value": 41, "width": 1}, {"from": "robert", "to": "stannis", "value": 40, "width": 1}, {"from": "robert", "to": "sansa", "value": 28, "width": 1}, {"from": "robert", "to": "petyr", "value": 26, "width": 1}, {"from": "robert", "to": "renly", "value": 22, "width": 1}, {"from": "robert", "to": "cersei", "value": 18, "width": 1}, {"from": "robert", "to": "lysa", "value": 16, "width": 1}, {"from": "robert", "to": "aerys", "value": 14, "width": 1}, {"from": "robert", "to": "barristan", "value": 14, "width": 1}, {"from": "robert", "to": "rhaegar", "value": 13, "width": 1}, {"from": "robert", "to": "tywin", "value": 13, "width": 1}, {"from": "robert", "to": "catelyn", "value": 12, "width": 1}, {"from": "robert", "to": "eddard", "value": 11, "width": 1}, {"from": "robert", "to": "pycelle", "value": 11, "width": 1}, {"from": "robert", "to": "varys", "value": 10, "width": 1}, {"from": "robert", "to": "davos", "value": 9, "width": 1}, {"from": "robert", "to": "mya", "value": 8, "width": 1}, {"from": "robert", "to": "tyrion", "value": 8, "width": 1}, {"from": "robert", "to": "lancel", "value": 8, "width": 1}, {"from": "robert", "to": "aegon", "value": 8, "width": 1}, {"from": "robert", "to": "lyanna", "value": 7, "width": 1}, {"from": "robert", "to": "kevan", "value": 6, "width": 1}, {"from": "robert", "to": "thoros", "value": 6, "width": 1}, {"from": "robert", "to": "taena", "value": 6, "width": 1}, {"from": "jon", "to": "sam", "value": 125, "width": 1}, {"from": "jon", "to": "ygritte", "value": 80, "width": 1}, {"from": "jon", "to": "tormund", "value": 67, "width": 1}, {"from": "jon", "to": "mormont", "value": 64, "width": 1}, {"from": "jon", "to": "stannis", "value": 63, "width": 1}, {"from": "jon", "to": "qhorin", "value": 62, "width": 1}, {"from": "jon", "to": "grenn", "value": 57, "width": 1}, {"from": "jon", "to": "mance", "value": 50, "width": 1}, {"from": "jon", "to": "melisandre", "value": 50, "width": 1}, {"from": "jon", "to": "arya", "value": 43, "width": 1}, {"from": "jon", "to": "satin", "value": 40, "width": 1}, {"from": "jon", "to": "bowen", "value": 39, "width": 1}, {"from": "jon", "to": "craster", "value": 33, "width": 1}, {"from": "jon", "to": "alliser", "value": 32, "width": 1}, {"from": "jon", "to": "clydas", "value": 26, "width": 1}, {"from": "jon", "to": "benjen", "value": 25, "width": 1}, {"from": "jon", "to": "rattleshirt", "value": 24, "width": 1}, {"from": "jon", "to": "samwell", "value": 24, "width": 1}, {"from": "jon", "to": "tyrion", "value": 22, "width": 1}, {"from": "jon", "to": "janos", "value": 21, "width": 1}, {"from": "jon", "to": "val", "value": 20, "width": 1}, {"from": "jon", "to": "stonesnake", "value": 17, "width": 1}, {"from": "jon", "to": "ghost", "value": 16, "width": 1}, {"from": "jon", "to": "old", "value": 15, "width": 1}, {"from": "jon", "to": "halder", "value": 14, "width": 1}, {"from": "jon", "to": "theon", "value": 14, "width": 1}, {"from": "jon", "to": "aemon", "value": 14, "width": 1}, {"from": "jon", "to": "alys", "value": 13, "width": 1}, {"from": "jon", "to": "sansa", "value": 13, "width": 1}, {"from": "jon", "to": "jarl", "value": 13, "width": 1}, {"from": "jon", "to": "denys", "value": 12, "width": 1}, {"from": "jon", "to": "donal", "value": 12, "width": 1}, {"from": "jon", "to": "septon", "value": 12, "width": 1}, {"from": "jon", "to": "harma", "value": 11, "width": 1}, {"from": "jon", "to": "dalla", "value": 11, "width": 1}, {"from": "jon", "to": "gilly", "value": 11, "width": 1}, {"from": "jon", "to": "eddard", "value": 10, "width": 1}, {"from": "jon", "to": "mord", "value": 10, "width": 1}, {"from": "jon", "to": "queen", "value": 10, "width": 1}, {"from": "jon", "to": "styr", "value": 10, "width": 1}, {"from": "jon", "to": "catelyn", "value": 10, "width": 1}, {"from": "jon", "to": "rickon", "value": 10, "width": 1}, {"from": "jon", "to": "owen", "value": 10, "width": 1}, {"from": "jon", "to": "kegs", "value": 9, "width": 1}, {"from": "jon", "to": "dywen", "value": 8, "width": 1}, {"from": "jon", "to": "lysa", "value": 8, "width": 1}, {"from": "jon", "to": "yoren", "value": 7, "width": 1}, {"from": "jon", "to": "godry", "value": 7, "width": 1}, {"from": "jon", "to": "tywin", "value": 7, "width": 1}, {"from": "jon", "to": "jojen", "value": 7, "width": 1}, {"from": "jon", "to": "thoren", "value": 7, "width": 1}, {"from": "jon", "to": "barristan", "value": 6, "width": 1}, {"from": "jon", "to": "chett", "value": 6, "width": 1}, {"from": "jon", "to": "ebben", "value": 6, "width": 1}, {"from": "jon", "to": "arryn", "value": 6, "width": 1}, {"from": "sam", "to": "gilly", "value": 45, "width": 1}, {"from": "sam", "to": "grenn", "value": 43, "width": 1}, {"from": "sam", "to": "craster", "value": 33, "width": 1}, {"from": "sam", "to": "dareon", "value": 27, "width": 1}, {"from": "sam", "to": "aemon", "value": 24, "width": 1}, {"from": "sam", "to": "stannis", "value": 22, "width": 1}, {"from": "sam", "to": "samwell", "value": 17, "width": 1}, {"from": "sam", "to": "mormont", "value": 16, "width": 1}, {"from": "sam", "to": "small", "value": 15, "width": 1}, {"from": "sam", "to": "xhondo", "value": 14, "width": 1}, {"from": "sam", "to": "clydas", "value": 9, "width": 1}, {"from": "sam", "to": "bannen", "value": 9, "width": 1}, {"from": "sam", "to": "denys", "value": 8, "width": 1}, {"from": "sam", "to": "chett", "value": 8, "width": 1}, {"from": "sam", "to": "dickon", "value": 7, "width": 1}, {"from": "sam", "to": "alleras", "value": 7, "width": 1}, {"from": "sam", "to": "melisandre", "value": 7, "width": 1}, {"from": "brienne", "to": "jaime", "value": 99, "width": 1}, {"from": "brienne", "to": "catelyn", "value": 38, "width": 1}, {"from": "brienne", "to": "podrick", "value": 36, "width": 1}, {"from": "brienne", "to": "renly", "value": 27, "width": 1}, {"from": "brienne", "to": "hyle", "value": 25, "width": 1}, {"from": "brienne", "to": "dick", "value": 23, "width": 1}, {"from": "brienne", "to": "sansa", "value": 19, "width": 1}, {"from": "brienne", "to": "cleos", "value": 18, "width": 1}, {"from": "brienne", "to": "septon", "value": 10, "width": 1}, {"from": "brienne", "to": "creighton", "value": 10, "width": 1}, {"from": "brienne", "to": "gendry", "value": 9, "width": 1}, {"from": "brienne", "to": "timeon", "value": 8, "width": 1}, {"from": "brienne", "to": "biter", "value": 8, "width": 1}, {"from": "brienne", "to": "illifer", "value": 7, "width": 1}, {"from": "brienne", "to": "shagwell", "value": 7, "width": 1}, {"from": "brienne", "to": "stannis", "value": 6, "width": 1}, {"from": "brienne", "to": "dontos", "value": 6, "width": 1}, {"from": "brienne", "to": "randyll", "value": 6, "width": 1}, {"from": "jaime", "to": "cersei", "value": 38, "width": 1}, {"from": "jaime", "to": "tywin", "value": 38, "width": 1}, {"from": "jaime", "to": "cleos", "value": 27, "width": 1}, {"from": "jaime", "to": "catelyn", "value": 26, "width": 1}, {"from": "jaime", "to": "qyburn", "value": 26, "width": 1}, {"from": "jaime", "to": "aerys", "value": 25, "width": 1}, {"from": "jaime", "to": "ilyn", "value": 20, "width": 1}, {"from": "jaime", "to": "tyrion", "value": 19, "width": 1}, {"from": "jaime", "to": "lancel", "value": 19, "width": 1}, {"from": "jaime", "to": "loras", "value": 18, "width": 1}, {"from": "jaime", "to": "sansa", "value": 18, "width": 1}, {"from": "jaime", "to": "steelshanks", "value": 15, "width": 1}, {"from": "jaime", "to": "darry", "value": 13, "width": 1}, {"from": "jaime", "to": "gregor", "value": 13, "width": 1}, {"from": "jaime", "to": "tommen", "value": 13, "width": 1}, {"from": "jaime", "to": "kevan", "value": 11, "width": 1}, {"from": "jaime", "to": "vargo", "value": 10, "width": 1}, {"from": "jaime", "to": "renly", "value": 10, "width": 1}, {"from": "jaime", "to": "hoster", "value": 10, "width": 1}, {"from": "jaime", "to": "barristan", "value": 9, "width": 1}, {"from": "jaime", "to": "ryman", "value": 9, "width": 1}, {"from": "jaime", "to": "emmon", "value": 8, "width": 1}, {"from": "jaime", "to": "bracken", "value": 8, "width": 1}, {"from": "jaime", "to": "aegon", "value": 8, "width": 1}, {"from": "jaime", "to": "tytos", "value": 8, "width": 1}, {"from": "jaime", "to": "brynden", "value": 7, "width": 1}, {"from": "jaime", "to": "walder", "value": 7, "width": 1}, {"from": "jaime", "to": "tully", "value": 7, "width": 1}, {"from": "jaime", "to": "myrcella", "value": 7, "width": 1}, {"from": "jaime", "to": "edmure", "value": 7, "width": 1}, {"from": "jaime", "to": "daven", "value": 7, "width": 1}, {"from": "jaime", "to": "genna", "value": 7, "width": 1}, {"from": "jaime", "to": "arthur", "value": 6, "width": 1}, {"from": "jaime", "to": "stannis", "value": 6, "width": 1}, {"from": "jaime", "to": "robin", "value": 6, "width": 1}, {"from": "jaime", "to": "balon", "value": 6, "width": 1}, {"from": "jaime", "to": "frey", "value": 6, "width": 1}, {"from": "jaime", "to": "urswyck", "value": 6, "width": 1}, {"from": "jaime", "to": "jonos", "value": 6, "width": 1}, {"from": "ygritte", "to": "mance", "value": 10, "width": 1}, {"from": "ygritte", "to": "rattleshirt", "value": 8, "width": 1}, {"from": "ygritte", "to": "tormund", "value": 6, "width": 1}, {"from": "jojen", "to": "meera", "value": 72, "width": 1}, {"from": "jojen", "to": "hodor", "value": 33, "width": 1}, {"from": "meera", "to": "hodor", "value": 53, "width": 1}, {"from": "arya", "to": "gendry", "value": 66, "width": 1}, {"from": "arya", "to": "sansa", "value": 61, "width": 1}, {"from": "arya", "to": "syrio", "value": 31, "width": 1}, {"from": "arya", "to": "yoren", "value": 30, "width": 1}, {"from": "arya", "to": "hot", "value": 26, "width": 1}, {"from": "arya", "to": "weese", "value": 20, "width": 1}, {"from": "arya", "to": "sandor", "value": 19, "width": 1}, {"from": "arya", "to": "tom", "value": 18, "width": 1}, {"from": "arya", "to": "jaqen", "value": 17, "width": 1}, {"from": "arya", "to": "nymeria", "value": 16, "width": 1}, {"from": "arya", "to": "lommy", "value": 14, "width": 1}, {"from": "arya", "to": "old", "value": 14, "width": 1}, {"from": "arya", "to": "thoros", "value": 13, "width": 1}, {"from": "arya", "to": "clegane", "value": 13, "width": 1}, {"from": "arya", "to": "roose", "value": 11, "width": 1}, {"from": "arya", "to": "catelyn", "value": 10, "width": 1}, {"from": "arya", "to": "frey", "value": 9, "width": 1}, {"from": "arya", "to": "jeyne", "value": 9, "width": 1}, {"from": "arya", "to": "harwin", "value": 9, "width": 1}, {"from": "arya", "to": "mycah", "value": 9, "width": 1}, {"from": "arya", "to": "vargo", "value": 8, "width": 1}, {"from": "arya", "to": "ramsay", "value": 8, "width": 1}, {"from": "arya", "to": "lem", "value": 7, "width": 1}, {"from": "arya", "to": "meryn", "value": 6, "width": 1}, {"from": "arya", "to": "anguy", "value": 6, "width": 1}, {"from": "arya", "to": "amory", "value": 6, "width": 1}, {"from": "arya", "to": "tickler", "value": 6, "width": 1}, {"from": "gendry", "to": "hot", "value": 24, "width": 1}, {"from": "gendry", "to": "yoren", "value": 12, "width": 1}, {"from": "gendry", "to": "thoros", "value": 9, "width": 1}, {"from": "gendry", "to": "tom", "value": 9, "width": 1}, {"from": "gendry", "to": "lommy", "value": 7, "width": 1}, {"from": "gendry", "to": "harwin", "value": 6, "width": 1}, {"from": "mormont", "to": "craster", "value": 10, "width": 1}, {"from": "mormont", "to": "jorah", "value": 10, "width": 1}, {"from": "stannis", "to": "davos", "value": 52, "width": 1}, {"from": "stannis", "to": "melisandre", "value": 38, "width": 1}, {"from": "stannis", "to": "renly", "value": 33, "width": 1}, {"from": "stannis", "to": "tywin", "value": 18, "width": 1}, {"from": "stannis", "to": "sansa", "value": 13, "width": 1}, {"from": "stannis", "to": "devan", "value": 13, "width": 1}, {"from": "stannis", "to": "catelyn", "value": 10, "width": 1}, {"from": "stannis", "to": "queen", "value": 10, "width": 1}, {"from": "stannis", "to": "mace", "value": 9, "width": 1}, {"from": "stannis", "to": "roose", "value": 9, "width": 1}, {"from": "stannis", "to": "asha", "value": 9, "width": 1}, {"from": "stannis", "to": "tyrion", "value": 9, "width": 1}, {"from": "stannis", "to": "axell", "value": 9, "width": 1}, {"from": "stannis", "to": "cortnay", "value": 8, "width": 1}, {"from": "stannis", "to": "justin", "value": 8, "width": 1}, {"from": "stannis", "to": "cressen", "value": 8, "width": 1}, {"from": "stannis", "to": "edric", "value": 7, "width": 1}, {"from": "stannis", "to": "ramsay", "value": 7, "width": 1}, {"from": "stannis", "to": "mance", "value": 7, "width": 1}, {"from": "stannis", "to": "salladhor", "value": 7, "width": 1}, {"from": "stannis", "to": "loras", "value": 6, "width": 1}, {"from": "stannis", "to": "cersei", "value": 6, "width": 1}, {"from": "stannis", "to": "aegon", "value": 6, "width": 1}, {"from": "stannis", "to": "val", "value": 6, "width": 1}, {"from": "sansa", "to": "petyr", "value": 27, "width": 1}, {"from": "sansa", "to": "dontos", "value": 23, "width": 1}, {"from": "sansa", "to": "jeyne", "value": 19, "width": 1}, {"from": "sansa", "to": "margaery", "value": 15, "width": 1}, {"from": "sansa", "to": "lysa", "value": 15, "width": 1}, {"from": "sansa", "to": "sandor", "value": 14, "width": 1}, {"from": "sansa", "to": "catelyn", "value": 14, "width": 1}, {"from": "sansa", "to": "loras", "value": 13, "width": 1}, {"from": "sansa", "to": "cersei", "value": 13, "width": 1}, {"from": "sansa", "to": "tyrion", "value": 11, "width": 1}, {"from": "sansa", "to": "meryn", "value": 11, "width": 1}, {"from": "sansa", "to": "ilyn", "value": 10, "width": 1}, {"from": "sansa", "to": "tywin", "value": 10, "width": 1}, {"from": "sansa", "to": "queen", "value": 9, "width": 1}, {"from": "sansa", "to": "nymeria", "value": 9, "width": 1}, {"from": "sansa", "to": "boros", "value": 9, "width": 1}, {"from": "sansa", "to": "shae", "value": 8, "width": 1}, {"from": "sansa", "to": "maegor", "value": 8, "width": 1}, {"from": "sansa", "to": "varys", "value": 7, "width": 1}, {"from": "sansa", "to": "moon", "value": 7, "width": 1}, {"from": "grenn", "to": "halder", "value": 7, "width": 1}, {"from": "grenn", "to": "dywen", "value": 7, "width": 1}, {"from": "catelyn", "to": "hoster", "value": 25, "width": 1}, {"from": "catelyn", "to": "renly", "value": 22, "width": 1}, {"from": "catelyn", "to": "rodrik", "value": 22, "width": 1}, {"from": "catelyn", "to": "walder", "value": 19, "width": 1}, {"from": "catelyn", "to": "edmure", "value": 19, "width": 1}, {"from": "catelyn", "to": "lysa", "value": 16, "width": 1}, {"from": "catelyn", "to": "brynden", "value": 16, "width": 1}, {"from": "catelyn", "to": "tywin", "value": 14, "width": 1}, {"from": "catelyn", "to": "grey", "value": 13, "width": 1}, {"from": "catelyn", "to": "tyrion", "value": 13, "width": 1}, {"from": "catelyn", "to": "frey", "value": 12, "width": 1}, {"from": "catelyn", "to": "theon", "value": 10, "width": 1}, {"from": "catelyn", "to": "jeyne", "value": 9, "width": 1}, {"from": "catelyn", "to": "bronn", "value": 9, "width": 1}, {"from": "catelyn", "to": "roslin", "value": 8, "width": 1}, {"from": "catelyn", "to": "mya", "value": 8, "width": 1}, {"from": "catelyn", "to": "robb", "value": 8, "width": 1}, {"from": "catelyn", "to": "rickon", "value": 7, "width": 1}, {"from": "catelyn", "to": "desmond", "value": 7, "width": 1}, {"from": "catelyn", "to": "roose", "value": 7, "width": 1}, {"from": "catelyn", "to": "tully", "value": 7, "width": 1}, {"from": "catelyn", "to": "mother", "value": 6, "width": 1}, {"from": "catelyn", "to": "loras", "value": 6, "width": 1}, {"from": "hodor", "to": "rodrik", "value": 9, "width": 1}, {"from": "hodor", "to": "rickon", "value": 9, "width": 1}, {"from": "hodor", "to": "old", "value": 8, "width": 1}, {"from": "hodor", "to": "osha", "value": 8, "width": 1}, {"from": "davos", "to": "melisandre", "value": 34, "width": 1}, {"from": "davos", "to": "axell", "value": 12, "width": 1}, {"from": "davos", "to": "salladhor", "value": 12, "width": 1}, {"from": "davos", "to": "godric", "value": 9, "width": 1}, {"from": "davos", "to": "devan", "value": 9, "width": 1}, {"from": "davos", "to": "cressen", "value": 8, "width": 1}, {"from": "davos", "to": "cortnay", "value": 7, "width": 1}, {"from": "davos", "to": "imry", "value": 7, "width": 1}, {"from": "davos", "to": "pylos", "value": 7, "width": 1}, {"from": "davos", "to": "black", "value": 6, "width": 1}, {"from": "davos", "to": "dale", "value": 6, "width": 1}, {"from": "davos", "to": "aegon", "value": 6, "width": 1}, {"from": "davos", "to": "edric", "value": 6, "width": 1}, {"from": "melisandre", "to": "queen", "value": 8, "width": 1}, {"from": "melisandre", "to": "axell", "value": 7, "width": 1}, {"from": "melisandre", "to": "devan", "value": 7, "width": 1}, {"from": "gilly", "to": "craster", "value": 17, "width": 1}, {"from": "bowen", "to": "othell", "value": 12, "width": 1}, {"from": "cersei", "to": "tyrion", "value": 13, "width": 1}, {"from": "cersei", "to": "kevan", "value": 13, "width": 1}, {"from": "cersei", "to": "margaery", "value": 12, "width": 1}, {"from": "cersei", "to": "tywin", "value": 12, "width": 1}, {"from": "cersei", "to": "qyburn", "value": 10, "width": 1}, {"from": "cersei", "to": "tommen", "value": 9, "width": 1}, {"from": "cersei", "to": "loras", "value": 7, "width": 1}, {"from": "cersei", "to": "merryweather", "value": 7, "width": 1}, {"from": "cersei", "to": "barristan", "value": 6, "width": 1}, {"from": "cersei", "to": "lancel", "value": 6, "width": 1}, {"from": "cersei", "to": "mace", "value": 6, "width": 1}, {"from": "cersei", "to": "taena", "value": 6, "width": 1}, {"from": "tywin", "to": "tyrion", "value": 24, "width": 1}, {"from": "tywin", "to": "kevan", "value": 19, "width": 1}, {"from": "tywin", "to": "gregor", "value": 11, "width": 1}, {"from": "tywin", "to": "renly", "value": 10, "width": 1}, {"from": "tywin", "to": "addam", "value": 7, "width": 1}, {"from": "tywin", "to": "mace", "value": 7, "width": 1}, {"from": "tywin", "to": "pycelle", "value": 7, "width": 1}, {"from": "tywin", "to": "bronn", "value": 7, "width": 1}, {"from": "tywin", "to": "frey", "value": 6, "width": 1}, {"from": "tywin", "to": "robb", "value": 6, "width": 1}, {"from": "tywin", "to": "aerys", "value": 6, "width": 1}, {"from": "tywin", "to": "weese", "value": 6, "width": 1}, {"from": "tywin", "to": "queen", "value": 6, "width": 1}, {"from": "barristan", "to": "hizdahr", "value": 36, "width": 1}, {"from": "barristan", "to": "daario", "value": 13, "width": 1}, {"from": "barristan", "to": "daenerys", "value": 13, "width": 1}, {"from": "barristan", "to": "quentyn", "value": 11, "width": 1}, {"from": "barristan", "to": "khrazz", "value": 10, "width": 1}, {"from": "barristan", "to": "groleo", "value": 9, "width": 1}, {"from": "barristan", "to": "missandei", "value": 8, "width": 1}, {"from": "barristan", "to": "skahaz", "value": 8, "width": 1}, {"from": "hizdahr", "to": "daario", "value": 19, "width": 1}, {"from": "hizdahr", "to": "skahaz", "value": 16, "width": 1}, {"from": "hizdahr", "to": "reznak", "value": 12, "width": 1}, {"from": "hizdahr", "to": "daenerys", "value": 10, "width": 1}, {"from": "podrick", "to": "hyle", "value": 8, "width": 1}, {"from": "podrick", "to": "tyrion", "value": 6, "width": 1}, {"from": "euron", "to": "victarion", "value": 36, "width": 1}, {"from": "euron", "to": "aeron", "value": 15, "width": 1}, {"from": "euron", "to": "asha", "value": 9, "width": 1}, {"from": "euron", "to": "balon", "value": 7, "width": 1}, {"from": "victarion", "to": "moqorro", "value": 10, "width": 1}, {"from": "victarion", "to": "asha", "value": 10, "width": 1}, {"from": "victarion", "to": "aeron", "value": 8, "width": 1}, {"from": "victarion", "to": "nute", "value": 8, "width": 1}, {"from": "victarion", "to": "balon", "value": 8, "width": 1}, {"from": "gerris", "to": "quentyn", "value": 34, "width": 1}, {"from": "gerris", "to": "dornish", "value": 7, "width": 1}, {"from": "gerris", "to": "daenerys", "value": 7, "width": 1}, {"from": "quentyn", "to": "dornish", "value": 8, "width": 1}, {"from": "quentyn", "to": "daenerys", "value": 8, "width": 1}, {"from": "quentyn", "to": "cletus", "value": 7, "width": 1}, {"from": "quentyn", "to": "arianne", "value": 7, "width": 1}, {"from": "renly", "to": "loras", "value": 7, "width": 1}, {"from": "yoren", "to": "lommy", "value": 12, "width": 1}, {"from": "irri", "to": "jhiqui", "value": 29, "width": 1}, {"from": "irri", "to": "jorah", "value": 10, "width": 1}, {"from": "jhiqui", "to": "jorah", "value": 11, "width": 1}, {"from": "jhiqui", "to": "drogo", "value": 8, "width": 1}, {"from": "bronn", "to": "tyrion", "value": 29, "width": 1}, {"from": "bronn", "to": "vardis", "value": 14, "width": 1}, {"from": "bronn", "to": "chiggen", "value": 11, "width": 1}, {"from": "bronn", "to": "lollys", "value": 10, "width": 1}, {"from": "bronn", "to": "timett", "value": 6, "width": 1}, {"from": "bronn", "to": "tanda", "value": 6, "width": 1}, {"from": "tyrion", "to": "jorah", "value": 10, "width": 1}, {"from": "tyrion", "to": "varys", "value": 10, "width": 1}, {"from": "tyrion", "to": "shae", "value": 8, "width": 1}, {"from": "tyrion", "to": "haldon", "value": 7, "width": 1}, {"from": "tyrion", "to": "mord", "value": 7, "width": 1}, {"from": "tyrion", "to": "mandon", "value": 7, "width": 1}, {"from": "tyrion", "to": "shagga", "value": 6, "width": 1}, {"from": "tyrion", "to": "pycelle", "value": 6, "width": 1}, {"from": "jorah", "to": "viserys", "value": 29, "width": 1}, {"from": "jorah", "to": "drogo", "value": 18, "width": 1}, {"from": "jorah", "to": "arstan", "value": 14, "width": 1}, {"from": "jorah", "to": "jhogo", "value": 12, "width": 1}, {"from": "jorah", "to": "daenerys", "value": 12, "width": 1}, {"from": "jorah", "to": "mirri", "value": 9, "width": 1}, {"from": "jorah", "to": "rhaegar", "value": 8, "width": 1}, {"from": "jorah", "to": "belwas", "value": 8, "width": 1}, {"from": "jorah", "to": "penny", "value": 7, "width": 1}, {"from": "jorah", "to": "illyrio", "value": 7, "width": 1}, {"from": "jorah", "to": "xaro", "value": 7, "width": 1}, {"from": "jorah", "to": "aegon", "value": 7, "width": 1}, {"from": "jorah", "to": "qotho", "value": 6, "width": 1}, {"from": "jorah", "to": "daario", "value": 6, "width": 1}, {"from": "viserys", "to": "illyrio", "value": 14, "width": 1}, {"from": "viserys", "to": "rhaegar", "value": 13, "width": 1}, {"from": "viserys", "to": "drogo", "value": 10, "width": 1}, {"from": "viserys", "to": "daenerys", "value": 8, "width": 1}, {"from": "petyr", "to": "lysa", "value": 12, "width": 1}, {"from": "petyr", "to": "merrett", "value": 9, "width": 1}, {"from": "hot", "to": "lommy", "value": 10, "width": 1}, {"from": "qyburn", "to": "pycelle", "value": 7, "width": 1}, {"from": "hyle", "to": "meribald", "value": 7, "width": 1}, {"from": "aerys", "to": "rhaegar", "value": 8, "width": 1}, {"from": "dontos", "to": "florian", "value": 8, "width": 1}, {"from": "rodrik", "to": "asha", "value": 11, "width": 1}, {"from": "rodrik", "to": "theon", "value": 8, "width": 1}, {"from": "kevan", "to": "lancel", "value": 11, "width": 1}, {"from": "walder", "to": "frey", "value": 12, "width": 1}, {"from": "lancel", "to": "darry", "value": 11, "width": 1}, {"from": "lancel", "to": "osmund", "value": 6, "width": 1}, {"from": "sandor", "to": "clegane", "value": 15, "width": 1}, {"from": "sandor", "to": "tickler", "value": 8, "width": 1}, {"from": "daario", "to": "brown", "value": 11, "width": 1}, {"from": "daario", "to": "daenerys", "value": 8, "width": 1}, {"from": "loras", "to": "margaery", "value": 15, "width": 1}, {"from": "loras", "to": "garlan", "value": 7, "width": 1}, {"from": "loras", "to": "knight", "value": 6, "width": 1}, {"from": "gregor", "to": "oberyn", "value": 18, "width": 1}, {"from": "gregor", "to": "tickler", "value": 6, "width": 1}, {"from": "gregor", "to": "clegane", "value": 6, "width": 1}, {"from": "drogo", "to": "mirri", "value": 10, "width": 1}, {"from": "drogo", "to": "daenerys", "value": 8, "width": 1}, {"from": "tom", "to": "lem", "value": 14, "width": 1}, {"from": "tom", "to": "anguy", "value": 6, "width": 1}, {"from": "asha", "to": "justin", "value": 17, "width": 1}, {"from": "asha", "to": "qarl", "value": 12, "width": 1}, {"from": "asha", "to": "galbart", "value": 10, "width": 1}, {"from": "asha", "to": "aeron", "value": 10, "width": 1}, {"from": "asha", "to": "balon", "value": 9, "width": 1}, {"from": "asha", "to": "theon", "value": 9, "width": 1}, {"from": "asha", "to": "godry", "value": 7, "width": 1}, {"from": "asha", "to": "black", "value": 7, "width": 1}, {"from": "varys", "to": "shae", "value": 13, "width": 1}, {"from": "jaqen", "to": "biter", "value": 7, "width": 1}, {"from": "arianne", "to": "myrcella", "value": 16, "width": 1}, {"from": "arianne", "to": "cedra", "value": 9, "width": 1}, {"from": "arianne", "to": "garin", "value": 8, "width": 1}, {"from": "arianne", "to": "areo", "value": 8, "width": 1}, {"from": "myrcella", "to": "dornish", "value": 9, "width": 1}, {"from": "myrcella", "to": "tommen", "value": 8, "width": 1}, {"from": "myrcella", "to": "trystane", "value": 6, "width": 1}, {"from": "aeron", "to": "balon", "value": 10, "width": 1}, {"from": "aeron", "to": "gorold", "value": 7, "width": 1}, {"from": "margaery", "to": "osney", "value": 8, "width": 1}, {"from": "margaery", "to": "tommen", "value": 8, "width": 1}, {"from": "margaery", "to": "megga", "value": 6, "width": 1}, {"from": "arstan", "to": "kraznys", "value": 8, "width": 1}, {"from": "arstan", "to": "belwas", "value": 7, "width": 1}, {"from": "illyrio", "to": "daenerys", "value": 8, "width": 1}, {"from": "theon", "to": "esgred", "value": 11, "width": 1}, {"from": "theon", "to": "roose", "value": 9, "width": 1}, {"from": "theon", "to": "ramsay", "value": 8, "width": 1}, {"from": "theon", "to": "balon", "value": 8, "width": 1}, {"from": "theon", "to": "grey", "value": 6, "width": 1}, {"from": "ramsay", "to": "reek", "value": 14, "width": 1}, {"from": "ramsay", "to": "roose", "value": 8, "width": 1}, {"from": "cressen", "to": "pylos", "value": 14, "width": 1}, {"from": "cressen", "to": "shireen", "value": 6, "width": 1}, {"from": "rhaegar", "to": "aegon", "value": 9, "width": 1}, {"from": "shae", "to": "mord", "value": 9, "width": 1}, {"from": "shae", "to": "lollys", "value": 6, "width": 1}, {"from": "shae", "to": "chella", "value": 6, "width": 1}, {"from": "boros", "to": "meryn", "value": 13, "width": 1}, {"from": "pyat", "to": "xaro", "value": 13, "width": 1}, {"from": "daenerys", "to": "aegon", "value": 7, "width": 1}, {"from": "jhogo", "to": "mirri", "value": 6, "width": 1}, {"from": "jhogo", "to": "rakharo", "value": 6, "width": 1}, {"from": "septon", "to": "meribald", "value": 7, "width": 1}, {"from": "creighton", "to": "illifer", "value": 11, "width": 1}, {"from": "haggon", "to": "varamyr", "value": 11, "width": 1}, {"from": "varamyr", "to": "thistle", "value": 7, "width": 1}, {"from": "brown", "to": "ben", "value": 7, "width": 1}, {"from": "lollys", "to": "tanda", "value": 8, "width": 1}, {"from": "mirri", "to": "qotho", "value": 9, "width": 1}, {"from": "brandon", "to": "rickard", "value": 9, "width": 1}, {"from": "yandry", "to": "ysilla", "value": 10, "width": 1}, {"from": "rickon", "to": "luwin", "value": 8, "width": 1}, {"from": "rickon", "to": "osha", "value": 7, "width": 1}, {"from": "sweets", "to": "yezzan", "value": 10, "width": 1}, {"from": "yezzan", "to": "nurse", "value": 8, "width": 1}, {"from": "yezzan", "to": "penny", "value": 7, "width": 1}, {"from": "qotho", "to": "haggo", "value": 9, "width": 1}, {"from": "moon", "to": "osmund", "value": 8, "width": 1}, {"from": "osmund", "to": "osney", "value": 6, "width": 1}, {"from": "emmon", "to": "genna", "value": 7, "width": 1}, {"from": "osha", "to": "luwin", "value": 7, "width": 1}, {"from": "bracken", "to": "blackwood", "value": 6, "width": 1}, {"from": "florian", "to": "jonquil", "value": 7, "width": 1}, {"from": "osney", "to": "osfryd", "value": 7, "width": 1}, {"from": "desmond", "to": "utherydes", "value": 6, "width": 1}, {"from": "big", "to": "little", "value": 7, "width": 1}, {"from": "shagga", "to": "timett", "value": 7, "width": 1}, {"from": "gared", "to": "waymar", "value": 6, "width": 1}, {"from": "gared", "to": "royce", "value": 6, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

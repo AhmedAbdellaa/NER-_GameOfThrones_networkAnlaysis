@@ -1,0 +1,7 @@
+.history
+*.zip
+*.pdf
+/data
+/NER_fromScratch/NER_model
+/NER_fromScratch/data
+/lib
